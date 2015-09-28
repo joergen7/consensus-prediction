@@ -1,6 +1,8 @@
 ---
 driver:
   name: vagrant
+  customize:
+    memory: 2048
 
 
 provisioner:
@@ -14,6 +16,10 @@ suites:
     run_list:
       - recipe[consensus-prediction::_common]
       - recipe[chef-bioinf-worker::openms]
+      - recipe[chef-bioinf-worker::crux]
+      - recipe[chef-bioinf-worker::tandem]
+      - recipe[chef-bioinf-worker::blast]
+      - recipe[chef-bioinf-worker::omssa]
       - recipe[chef-cuneiform::default]
       - recipe[consensus-prediction::default]
     attributes:
