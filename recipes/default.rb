@@ -5,7 +5,6 @@
 # Copyright (c) 2015 Jörgen Brandt, All Rights Reserved.
 
 include_recipe "chef-bioinf-worker::openms"
-include_recipe "chef-bioinf-worker::crux"
 include_recipe "chef-bioinf-worker::msgf"
 include_recipe "chef-bioinf-worker::tandem"
 include_recipe "chef-bioinf-worker::blast"
