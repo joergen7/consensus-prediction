@@ -1,1 +1,14 @@
-'hello world';
+spectraDir=".";
+spectraFiles=getSupportedSpectraFilesFromDir(dir:spectraDir);
+spectraFiles;
+
+deftask getSupportedSpectraFilesFromDir(<spectraFiles(File)>:dir) in java *{
+	File sdir = new File(dir);
+	spectraFiles = sdir.listFiles(new FileFilter() {
+		public boolean accept(File pathname) {
+			if(pathname.getName().endsWith(".mgf"))
+				return true;
+			return false;		
+		}	
+	});
+}*
