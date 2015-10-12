@@ -14,11 +14,7 @@ deftask convertSpectraFiles(mzMLFile(File):spectraFile(File)) in bash *{
 
 # Turn a tar file into a list of spectra files.
 deftask getSupportedSpectraFilesFromTar(<spectraFiles(File)>:spectra_tar(File)) in bash *{
-	mkdir tmp
-	mv $spectra_tar tmp
-	cd tmp
 	tar xf $spectra_tar
-	rm $spectra_tar
-	$spectraFiles=`ls`
+	spectraFiles=`tar tf $spectra_tar`
 }*
 
