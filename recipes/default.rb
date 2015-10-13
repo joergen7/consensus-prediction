@@ -19,3 +19,13 @@ template "#{node.dir.wf}/consensus.cf" do
   source "consensus.cf.erb"
 end
 
+# place example data
+cookbook_file "#{node.dir.data}/spectra.tar" do
+  source "spectra.tar"
+end
+
+cookbook_file "#{node.dir.data}/barleyprots.fa" do
+  source "barleyprots.fa"
+end
+
+
