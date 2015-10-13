@@ -2,7 +2,6 @@
 spectra_tar="spectra.tar";
 db_fasta="barleyprots.fa";
 blast_index_name="barleyprots";
-omssaModsXML="mods.xml";
 
 # Convert Spectra and index databases
 spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
@@ -12,7 +11,8 @@ db_blastDB_tar=makeBlastDB(db_fasta:db_fasta idx_name:blast_index_name);
 db_blastDB_tar;
 
 # Run database search tools
-OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name mods:omssaModsXML);
+OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name);
+OmssaRes;
 
 # Create consensus
 
@@ -21,16 +21,15 @@ OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_n
 # Deftasks
 #
 # Index fasta database using makeblastdb from ncbi
-deftask makeBlastDB(db_blastDB(File):db_fasta(File) idx_name) in bash *{
+deftask makeBlastDB(db_blastDB_tar(File):db_fasta(File) idx_name) in bash *{
 	makeblastdb -in $db_fasta -dbtype prot -hash_index -out $idx_name
 	tar cf db.tar --remove-files $idx_name*
-	db_blastDB=db.tar
+	db_blastDB_tar=db.tar
 }*
 
 # Run OMSSA on the mzML data using the TOPP OMSSAAdapter
-deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name mods(File)) in bash *{
-	tar xf db_blastDB_tar
-	touch $mods
+deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name) in bash *{
+	tar xf $db_blastDB_tar
 	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq
 	OmssaRes=res.idXML
 }*
