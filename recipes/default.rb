@@ -6,9 +6,9 @@
 
 include_recipe "chef-bioinf-worker::openms"
 include_recipe "chef-bioinf-worker::msgf"
+include_recipe "chef-bioinf-worker::omssa"
 include_recipe "chef-bioinf-worker::tandem"
 include_recipe "chef-bioinf-worker::blast"
-include_recipe "chef-bioinf-worker::omssa"
 include_recipe "chef-cuneiform::default"
 
 directory node.dir.wf
