@@ -32,7 +32,8 @@ allresults=mergedOmssa mergedMsgf mergedTandem;
 mergedResults=mergeResults(idxml_results:allresults);
 
 ConsensusResults=runConsensus(idxml_results:mergedResults);
-csv_results=idxml2csv(idxml_results:ConsensusResults);
+MappedConsensusResults=mapPeptides(idxml_results:ConsensusResults db_fasta:db_fasta);
+csv_results=idxml2csv(idxml_results:MappedConsensusResults);
 csv_results;
 
 ###################################################################
@@ -95,6 +96,12 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #
 #			Other Tasks
 #
+
+#
+deftask mapPeptides(MappedResults(File):idxml_results(File) db_fasta(File)) in bash *{
+	PeptideIndexer -in $idxml_results -fasta $db_fasta -out mappedres.idXML -missing_decoy_action warn -allow_unmatched
+	MappedResults=mappedres.idXML
+}*
 
 # Convert resutls into easier to read csv format.
 deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
