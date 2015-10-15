@@ -2,24 +2,67 @@
 spectra_tar="spectra.tar";
 db_fasta="barleyprots.fa";
 blast_index_name="barleyprots";
+omssa_mods="mods.xml";
+omssa_usermods="usermods.xml";
 
 # Convert Spectra and index databases
 spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
 mzMLFiles=convertSpectraFiles(spectraFile:spectraFiles);
-mzMLFiles;
+#mzMLFiles;
 db_blastDB_tar=makeBlastDB(db_fasta:db_fasta idx_name:blast_index_name);
-db_blastDB_tar;
+#db_blastDB_tar;
+db_msgfDB_tar=makeMsgfDB(db_fasta:db_fasta);
+#db_msgfDB_tar;
+db_TandemDB=makeTandemDB(db_fasta:db_fasta);
+#db_TandemDB;
 
 # Run database search tools
-OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name);
+OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
 OmssaRes;
+MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
+MsgfRes;
+TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
+TandemRes;
 
 # Create consensus
 
 
+###################################################################
+# 			   Deftasks                            #
+###################################################################
+
 #
-# Deftasks
+# 			Run Algorithms
 #
+
+# Run OMSSA on the mzML data using the TOPP OMSSAAdapter
+deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name omssa_mods(File) omssa_usermods(File)) in bash *{
+	tar xf $db_blastDB_tar
+	ol=`whereis omssacl`
+	arr=($ol)
+	ln -s ${arr[1]} omssacl
+	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl
+	OmssaRes=res.idXML
+}*
+
+# Run MSGF+ on the mzML data using the TOPP MSGFPlusAdapter
+deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File)) in bash *{
+	tar xf $db_msgfDB_tar
+	mv $mzMLFile spectra.mzML
+	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable /opt/software/msgf/MSGFPlus.jar
+	MsgfRes=msgf.idXML
+}*
+
+# Run X!Tandem on the mzML data using the TOPP XTandenAdapter
+deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File)) in bash *{
+	XTandemAdapter -in $mzMLFile -database $db_TandemDB -out tres.idXML
+	TandemRes=tres.idXML
+}*
+
+#
+# 			Index Databases
+#
+
 # Index fasta database using makeblastdb from ncbi
 deftask makeBlastDB(db_blastDB_tar(File):db_fasta(File) idx_name) in bash *{
 	makeblastdb -in $db_fasta -dbtype prot -hash_index -out $idx_name
@@ -27,12 +70,22 @@ deftask makeBlastDB(db_blastDB_tar(File):db_fasta(File) idx_name) in bash *{
 	db_blastDB_tar=db.tar
 }*
 
-# Run OMSSA on the mzML data using the TOPP OMSSAAdapter
-deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name) in bash *{
-	tar xf $db_blastDB_tar
-	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq
-	OmssaRes=res.idXML
+# Index fasta database using MSGF+
+deftask makeMsgfDB(db_msgfDB_tar(File):db_fasta(File)) in bash *{
+	buildsa -d $db_fasta -tda 0
+	tar cf msgfdb.tar *.canno *.cnlcp *.csarr *.cseq $db_fasta
+	db_msgfDB_tar=msgfdb.tar
 }*
+
+# Index fasta database using XTandem
+deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
+	fasta_pro.exe $db_fasta
+	db_tandemDB=${db_fasta}.pro
+}*
+
+#
+#			Other Tasks
+#
 
 # Convert from mzdata, mzXML, mzML, .., mgf to mzML.
 deftask convertSpectraFiles(mzMLFile(File):spectraFile(File)) in bash *{
