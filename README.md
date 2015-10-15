@@ -63,6 +63,7 @@ the cookbook directory and enter
     git pull
     berks update
     kitchen converge
+    alternatively: sudo chef-client -z -r "consensus-prediction::_common,consensus-prediction::default"
     
 If you have doubts whether the VM is still in a usable state you can destroy it
 before converging.
