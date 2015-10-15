@@ -47,9 +47,6 @@ csv_results;
 # Run OMSSA on the mzML data using the TOPP OMSSAAdapter
 deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name omssa_mods(File) omssa_usermods(File)) in bash *{
 	tar xf $db_blastDB_tar
-	#ol=`whereis omssacl`
-	#arr=($ol)
-	#ln -s ${arr[1]} omssacl
 	ln -s `which omssacl` omssacl
 	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl
 	OmssaRes=res.idXML
@@ -59,7 +56,9 @@ deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_
 deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File)) in bash *{
 	tar xf $db_msgfDB_tar
 	mv $mzMLFile spectra.mzML
-	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable /opt/software/msgf/MSGFPlus.jar
+	mp=(`whereis MSGFPlus.jar`)
+	msgfjarpath=${mp[1]}
+	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable $msgfjarpath
 	MsgfRes=msgf.idXML
 }*
 
