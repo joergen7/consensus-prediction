@@ -18,14 +18,22 @@ db_TandemDB=makeTandemDB(db_fasta:db_fasta);
 
 # Run database search tools
 OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
-OmssaRes;
+#OmssaRes;
 MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
-MsgfRes;
+#MsgfRes;
 TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
-TandemRes;
+#TandemRes;
 
 # Create consensus
+mergedOmssa=mergeResults(idxml_results:OmssaRes);
+mergedMsgf=mergeResults(idxml_results:MsgfRes);
+mergedTandem=mergeResults(idxml_results:TandemRes);
+allresults=mergedOmssa mergedMsgf mergedTandem;
+mergedResults=mergeResults(idxml_results:allresults);
 
+ConsensusResults=runConsensus(idxml_results:mergedResults);
+csv_results=idxml2csv(idxml_results:ConsensusResults);
+csv_results;
 
 ###################################################################
 # 			   Deftasks                            #
@@ -38,9 +46,10 @@ TandemRes;
 # Run OMSSA on the mzML data using the TOPP OMSSAAdapter
 deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name omssa_mods(File) omssa_usermods(File)) in bash *{
 	tar xf $db_blastDB_tar
-	ol=`whereis omssacl`
-	arr=($ol)
-	ln -s ${arr[1]} omssacl
+	#ol=`whereis omssacl`
+	#arr=($ol)
+	#ln -s ${arr[1]} omssacl
+	ln -s `which omssacl` omssacl
 	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl
 	OmssaRes=res.idXML
 }*
@@ -86,6 +95,31 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #
 #			Other Tasks
 #
+
+# Convert resutls into easier to read csv format.
+deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
+	TextExporter -in $idxml_resutls -out res.csv
+	csv_results=res.csv
+}*
+
+# Create consensus using OpenMS ConsensusID
+deftask runConsensus(Consensus(File):idxml_results(File)) in bash *{
+	mv $idxml_results res.idXML
+	ConsensusID -in res.idXML -out cons.idXML
+	Consensus=cons.idXML
+}*
+
+# Merged multiple idXML files
+deftask mergeResults(MergedResults(File):<idxml_results(File)>) in bash *{
+	#iterate files and split by spaces and make sure they end in .idXML
+	for i in ${idxml_results[@]}
+	do
+		cp $i $i.idXML
+	done
+	files=`ls *.idXML`
+	IDMerger -in $files -out merged.idXML
+	MergedResults=merged.idXML
+}*
 
 # Convert from mzdata, mzXML, mzML, .., mgf to mzML.
 deftask convertSpectraFiles(mzMLFile(File):spectraFile(File)) in bash *{
