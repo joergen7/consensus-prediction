@@ -98,7 +98,7 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 
 # Convert resutls into easier to read csv format.
 deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
-	TextExporter -in $idxml_resutls -out res.csv
+	TextExporter -in $idxml_results -out res.csv
 	csv_results=res.csv
 }*
 
