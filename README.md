@@ -1,5 +1,19 @@
-# consensus-prediction
-A consensus prediction workflow for MS data
+# Workflow for the Consensus Prediction of Proteomics Mass Spectrometric Data
+Mass spectrometry (MS) is currently the tool of choice to detect proteins in complex mixtures. 
+Interpreting MS/MS spectra manually is possible, but thousands can be measured per hour and therefore computational tools
+are used to establish peptide spectrum matches (PSM). A battery of tools have been published 
+(OMSSA, X!Tandem, pFind, MSAmanda, MSGF+, MassWizz, ...) and are being sold (Sequest, Mascot, PEAKS, ...).
+It has been shown that using multiple tools allows the establishment of more confident PSMs.
+Therefore, consensus prediction is popular if an adequate compute infrastructure is available.
+Oliver Kohlbacher's group published a consensus scoring algorithm in 2011 [Paper](http://pubs.acs.org/doi/abs/10.1021/pr2002879).
+They used OMSSA, X!Tandem, and Mascot in there study. We were not able to find the workflow they build in OpenMS and,
+therefore, prepared the workflow using mostly OpenMS. Since not everyone has access to the commercial tool Mascot,
+we elected to use MSGF+ (has been shown to perform as well as Mascot) to replace it.
+
+The workflow presented here has a number of additional advantages:
+1) Seamless installation of all components
+2) Distributed computation
+3) No dependency on commercial tools
 
 ## Prerequisites
 
