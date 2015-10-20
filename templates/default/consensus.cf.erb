@@ -1,3 +1,11 @@
+#Adjust such that workflow will work per spectrum.
+
+deftask perSpectrum(csv(File):spectrum(File) <db_fasta(File)>) {
+	csv=makeMsgfDB(db_fasta:db_fasta);
+}
+
+
+
 # Input data and settings
 spectra_tar="spectra.tar";
 db_fasta="barleyprots.fa";
@@ -132,7 +140,7 @@ deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
 # Create consensus using OpenMS ConsensusID
 deftask runConsensus(Consensus(File):idxml_results(File)) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML
+	ConsensusID -in res.idXML -out cons.idXML -threads 4
 	Consensus=cons.idXML
 }*
 
