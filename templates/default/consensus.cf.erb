@@ -8,32 +8,47 @@ omssa_usermods="usermods.xml";
 # Convert Spectra and index databases
 spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
 mzMLFiles=convertSpectraFiles(spectraFile:spectraFiles);
+db_fasta_decoy=makeDecoyDB(db_fasta:db_fasta);
 #mzMLFiles;
 db_blastDB_tar=makeBlastDB(db_fasta:db_fasta idx_name:blast_index_name);
-#db_blastDB_tar;
+db_blastDB_decoy_tar=makeBlastDB(db_fasta:db_fasta_decoy idx_name:blast_index_name);
 db_msgfDB_tar=makeMsgfDB(db_fasta:db_fasta);
-#db_msgfDB_tar;
+db_msgfDB_decoy_tar=makeMsgfDB(db_fasta:db_fasta_decoy);
 db_TandemDB=makeTandemDB(db_fasta:db_fasta);
-#db_TandemDB;
+db_Tandem_decoyDB=makeTandemDB(db_fasta:db_fasta_decoy);
 
 # Run database search tools
 OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
-#OmssaRes;
+OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+
 MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
-#MsgfRes;
+MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_decoy_tar);
+
 TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
-#TandemRes;
+TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB);
 
 # Create consensus
-mergedOmssa=mergeResults(idxml_results:OmssaRes);
-mergedMsgf=mergeResults(idxml_results:MsgfRes);
-mergedTandem=mergeResults(idxml_results:TandemRes);
-allresults=mergedOmssa mergedMsgf mergedTandem;
-mergedResults=mergeResults(idxml_results:allresults);
+MergedOmssa=mergeResults(idxml_results:OmssaRes);
+MergedDecoyOmssa=mergeResults(idxml_results:OmssaDecoyRes);
 
-ConsensusResults=runConsensus(idxml_results:mergedResults);
-MappedConsensusResults=mapPeptides(idxml_results:ConsensusResults db_fasta:db_fasta);
-csv_results=idxml2csv(idxml_results:MappedConsensusResults);
+MergedMsgf=mergeResults(idxml_results:MsgfRes);
+MergedDecoyMsgf=mergeResults(idxml_results:MsgfDecoyRes);
+
+MergedTandem=mergeResults(idxml_results:TandemRes);
+MergedDecoyTandem=mergeResults(idxml_results:TandemDecoyRes);
+
+TargetResults=MergedOmssa MergedMsgf MergedTandem;
+DecoyResults=MergedDecoyOmssa MergedDecoyMsgf MergedDecoyTandem;
+MergedTargetResults=mergeResults(idxml_results:TargetResults);
+MergedDecoyResults=mergeResults(idxml_results:DecoyResults);
+
+ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults);
+ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults);
+
+FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
+
+MappedFDRResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
+csv_results=idxml2csv(idxml_results:MappedFDRResults);
 csv_results;
 
 ###################################################################
@@ -96,6 +111,12 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #			Other Tasks
 #
 
+# Takes decoy ConsensusID results and target ConsensusID results and performs FDR.
+deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File)) in bash *{
+	FalseDiscoveryRate -in_target $target_idxml -in_decoy $decoy_idxml -out res.idXML -peptides_ony
+	fdr_res=res.idXML
+}*
+
 #
 deftask mapPeptides(MappedResults(File):idxml_results(File) db_fasta(File)) in bash *{
 	PeptideIndexer -in $idxml_results -fasta $db_fasta -out mappedres.idXML -missing_decoy_action warn -allow_unmatched
@@ -136,4 +157,9 @@ deftask convertSpectraFiles(mzMLFile(File):spectraFile(File)) in bash *{
 deftask getSupportedSpectraFilesFromTar(<spectraFiles(File)>:spectra_tar(File)) in bash *{
 	tar xf $spectra_tar
 	spectraFiles=`tar tf $spectra_tar`
+}*
+
+deftask makeDecoyDB(db_fasta_decoy(File):db_fasta(File)) in bash *{
+	DecoyDatabase -in $db_fasta -out decoy.fasta
+	db_fasta_decoy=decoy.fasta
 }*
