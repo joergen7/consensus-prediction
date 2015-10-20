@@ -1,17 +1,11 @@
-#Adjust such that workflow will work per spectrum.
-
-deftask perSpectrum(csv(File):spectrum(File) <db_fasta(File)>) {
-	csv=makeMsgfDB(db_fasta:db_fasta);
-}
-
-
-
 # Input data and settings
 spectra_tar="spectra.tar";
 db_fasta="barleyprots.fa";
 blast_index_name="barleyprots";
 omssa_mods="mods.xml";
 omssa_usermods="usermods.xml";
+numthreads="4";
+
 
 # Convert Spectra and index databases
 spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
@@ -25,39 +19,58 @@ db_msgfDB_decoy_tar=makeMsgfDB(db_fasta:db_fasta_decoy);
 db_TandemDB=makeTandemDB(db_fasta:db_fasta);
 db_Tandem_decoyDB=makeTandemDB(db_fasta:db_fasta_decoy);
 
-# Run database search tools
-OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
-OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+csvResult=perSpectraFile(mzMLFiles:mzMLFiles 
+	db_fasta:db_fasta db_fasta_decoy:db_fasta_decoy db_blastDB_tar:db_blastDB_tar
+	db_blastDB_decoy_tar:db_blastDB_decoy_tar db_msgfDB_tar:db_msgfDB_tar
+	db_msgfDB_decoy_tar:db_msgfDB_decoy_tar db_TandemDB:db_TandemDB
+	db_Tandem_decoyDB:db_Tandem_decoyDB omssa_mods:omssa_mods 
+	omssa_usermods:omssa_usermods blast_index_name:blast_index_name
+	numthreads:numthreads);
+csvResult;
 
-MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
-MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_decoy_tar);
+#Run the worflow once for each spectra file in spectra.tar
+deftask perSpectraFile(csvResult(File):mzMLFiles(File) 
+		[db_fasta db_fasta_decoy 
+		 db_blastDB_tar(File) db_blastDB_decoy_tar(File) db_msgfDB_tar(File) 
+		 db_msgfDB_decoy_tar(File) db_TandemDB(File) db_Tandem_decoyDB(File) 
+		 omssa_mods omssa_usermods blast_index_name numthreads]) {
 
-TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
-TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB);
+	# Run database search tools
+	OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+	OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
 
-# Create consensus
-MergedOmssa=mergeResults(idxml_results:OmssaRes);
-MergedDecoyOmssa=mergeResults(idxml_results:OmssaDecoyRes);
+	MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
+	MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta_decoy db_msgfDB_tar:db_msgfDB_decoy_tar);
 
-MergedMsgf=mergeResults(idxml_results:MsgfRes);
-MergedDecoyMsgf=mergeResults(idxml_results:MsgfDecoyRes);
+	TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
+	TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB);
 
-MergedTandem=mergeResults(idxml_results:TandemRes);
-MergedDecoyTandem=mergeResults(idxml_results:TandemDecoyRes);
 
-TargetResults=MergedOmssa MergedMsgf MergedTandem;
-DecoyResults=MergedDecoyOmssa MergedDecoyMsgf MergedDecoyTandem;
-MergedTargetResults=mergeResults(idxml_results:TargetResults);
-MergedDecoyResults=mergeResults(idxml_results:DecoyResults);
+	# Create consensus
+#	MergedOmssa=mergeResults(idxml_results:OmssaRes);
+#	MergedDecoyOmssa=mergeResults(idxml_results:OmssaDecoyRes);
+#	MergedMsgf=mergeResults(idxml_results:MsgfRes);
+#	MergedDecoyMsgf=mergeResults(idxml_results:MsgfDecoyRes);
+#	MergedTandem=mergeResults(idxml_results:TandemRes);
+#	MergedDecoyTandem=mergeResults(idxml_results:TandemDecoyRes);
+#	TargetResults=MergedOmssa MergedMsgf MergedTandem;
+#	DecoyResults=MergedDecoyOmssa MergedDecoyMsgf MergedDecoyTandem;
 
-ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults);
-ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults);
+	TargetResults=OmssaRes MsgfRes TandemRes;
+	DecoyResults=OmssaDecoyRes MsgfDecoyRes TandemDecoyRes;
 
-FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
+	MergedTargetResults=mergeResults(idxml_results:TargetResults);
+	MergedDecoyResults=mergeResults(idxml_results:DecoyResults);
 
-MappedFDRResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
-csv_results=idxml2csv(idxml_results:MappedFDRResults);
-csv_results;
+	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults numthreads);
+	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults numthreads);
+
+	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
+
+	MappedFDRResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
+	csvResult=idxml2csv(idxml_results:MappedFDRResults);
+}
+
 
 ###################################################################
 # 			   Deftasks                            #
@@ -138,9 +151,9 @@ deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
 }*
 
 # Create consensus using OpenMS ConsensusID
-deftask runConsensus(Consensus(File):idxml_results(File)) in bash *{
+deftask runConsensus(Consensus(File):idxml_results(File) numthreads) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML -threads 4
+	ConsensusID -in res.idXML -out cons.idXML -threads $numthreads
 	Consensus=cons.idXML
 }*
 
