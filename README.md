@@ -16,6 +16,9 @@ The workflow presented here has a number of additional advantages:
     2) Distributed computation
     3) No dependency on commercial tools
 
+Different from the workflow presented in the [(Nahnsen et al. 2011 )](http://pubs.acs.org/doi/abs/10.1021/pr2002879), we chose to use a target and a decoy database and perform the consensus on both of them individually before calculating an FDR. We reason that we loose less PSMs in this manner when compared to performing an FDR before calculating the consensus.
+
+
 ## Prerequisites
 
 Install the following packages:
