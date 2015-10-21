@@ -1,7 +1,7 @@
 # Input data and settings
 spectra_tar="spectra.tar";
-db_fasta="barleyprots.fa";
-blast_index_name="barleyprots";
+db_fasta="humanprots.fasta";
+blast_index_name="humanprots";
 omssa_mods="mods.xml";
 omssa_usermods="usermods.xml";
 numthreads="4";
@@ -62,8 +62,8 @@ deftask perSpectraFile(csvResult(File):mzMLFiles(File)
 	MergedTargetResults=mergeResults(idxml_results:TargetResults);
 	MergedDecoyResults=mergeResults(idxml_results:DecoyResults);
 
-	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults numthreads);
-	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults numthreads);
+	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults numthreads:numthreads);
+	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults numthreads:numthreads);
 
 	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
 
@@ -153,7 +153,7 @@ deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
 # Create consensus using OpenMS ConsensusID
 deftask runConsensus(Consensus(File):idxml_results(File) numthreads) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML -threads $numthreads
+	ConsensusID -in res.idXML -out cons.idXML -algorithm ranks -threads $numthreads
 	Consensus=cons.idXML
 }*
 
