@@ -18,6 +18,20 @@ The workflow presented here has a number of additional advantages:
 
 Different from the workflow presented in the [(Nahnsen et al. 2011 )](http://pubs.acs.org/doi/abs/10.1021/pr2002879), we chose to use a target and a decoy database and perform the consensus on both of them individually before calculating an FDR. We reason that we loose less PSMs in this manner when compared to performing an FDR before calculating the consensus.
 
+## Executing the Workflow
+When executing the workflow, the files mods.xml and usermods.xml (two required files for OMSSA) must exist in the current directory. A protein database needs to be in the current directory and its name must be protein.fasta. The files should only contain relevant protein information and must not contain any decoy sequences. All spectra files (mgf, mzXML, mzML, ms2 formats are supported) that are intended to be run need to be tared (tar cf spectra.tar ..SPECTRA..FILES..) and the spectra.tar file needs to be in the current directory. Precursor mass tolerance is set to 0.8 by default and fragment mass tolerance to 0.3. To change these settings, the consensus.cf file needs to be edited manually (any text editor will do .. changes values in lines 8 and 9 to suit your instrument error).
+If the following files:
+
+    1) mods.xml
+    2) usermods.xml
+    3) protein.fasta
+    4) spectra.tar
+    5) consensus.cf
+    
+are in the current directory and if all below prerequisities are fullfilled then the workflow can be started by:
+
+    cuneiform consensus.cf
+    
 
 ## Prerequisites
 
