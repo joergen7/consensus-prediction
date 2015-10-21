@@ -1,17 +1,19 @@
 # Input data and settings
-spectra_tar="spectra.tar";
-db_fasta="humanprots.fasta";
-blast_index_name="humanprots";
-omssa_mods="mods.xml";
-omssa_usermods="usermods.xml";
-numthreads="4";
+spectra_tar="spectra.tar";		# Needs to be provided (can contain mgf, mzXML, mzML, or ms2 files).
+db_fasta="protein.fasta"; 		# Only provide the target DB (protein) in fasta format ... decoy will be created.
+blast_index_name="prots"; 		# ignore
+omssa_mods="mods.xml";			# File necessary for OMSSA to run.
+omssa_usermods="usermods.xml";		# File necessary for OMSSA to run.
+numthreads="4"; 			#ConsensusID is slow and the last process so it should run in parallel (give half of the cores to this process).
+pmt="0.8"; 				#Precursor mass error tolerance (Daltons)
+fmt="0.3"; 				#Fragment (Product) mass error tolerance (Daltons)
 
 
 # Convert Spectra and index databases
 spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
 mzMLFiles=convertSpectraFiles(spectraFile:spectraFiles);
+#mzMLFiles; #Remove the hashtag at the beginning of the line to store the converted spectra.
 db_fasta_decoy=makeDecoyDB(db_fasta:db_fasta);
-#mzMLFiles;
 db_blastDB_tar=makeBlastDB(db_fasta:db_fasta idx_name:blast_index_name);
 db_blastDB_decoy_tar=makeBlastDB(db_fasta:db_fasta_decoy idx_name:blast_index_name);
 db_msgfDB_tar=makeMsgfDB(db_fasta:db_fasta);
@@ -19,56 +21,47 @@ db_msgfDB_decoy_tar=makeMsgfDB(db_fasta:db_fasta_decoy);
 db_TandemDB=makeTandemDB(db_fasta:db_fasta);
 db_Tandem_decoyDB=makeTandemDB(db_fasta:db_fasta_decoy);
 
-csvResult=perSpectraFile(mzMLFiles:mzMLFiles 
+idxml_results=perSpectraFile(mzMLFiles:mzMLFiles 
 	db_fasta:db_fasta db_fasta_decoy:db_fasta_decoy db_blastDB_tar:db_blastDB_tar
 	db_blastDB_decoy_tar:db_blastDB_decoy_tar db_msgfDB_tar:db_msgfDB_tar
 	db_msgfDB_decoy_tar:db_msgfDB_decoy_tar db_TandemDB:db_TandemDB
 	db_Tandem_decoyDB:db_Tandem_decoyDB omssa_mods:omssa_mods 
 	omssa_usermods:omssa_usermods blast_index_name:blast_index_name
-	numthreads:numthreads);
+	numthreads:numthreads pmt:pmt fmt:fmt);
+csvResult=idxml2csv(idxml_results:idxml_results);
+idxml_results;
 csvResult;
 
 #Run the worflow once for each spectra file in spectra.tar
-deftask perSpectraFile(csvResult(File):mzMLFiles(File) 
+deftask perSpectraFile(idxmlResults(File):mzMLFiles(File) 
 		[db_fasta db_fasta_decoy 
 		 db_blastDB_tar(File) db_blastDB_decoy_tar(File) db_msgfDB_tar(File) 
 		 db_msgfDB_decoy_tar(File) db_TandemDB(File) db_Tandem_decoyDB(File) 
-		 omssa_mods omssa_usermods blast_index_name numthreads]) {
+		 omssa_mods omssa_usermods blast_index_name numthreads pmt fmt]) {
 
 	# Run database search tools
-	OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
-	OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+	OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name pmt:pmt fmt:fmt omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+	OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name pmt:pmt fmt:fmt omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
 
-	MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar);
-	MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta_decoy db_msgfDB_tar:db_msgfDB_decoy_tar);
+	MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar pmt:pmt);
+	MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta_decoy db_msgfDB_tar:db_msgfDB_decoy_tar pmt:pmt);
 
-	TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB);
-	TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB);
+	TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB pmt:pmt fmt:fmt);
+	TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB pmt:pmt fmt:fmt);
 
 
 	# Create consensus
-#	MergedOmssa=mergeResults(idxml_results:OmssaRes);
-#	MergedDecoyOmssa=mergeResults(idxml_results:OmssaDecoyRes);
-#	MergedMsgf=mergeResults(idxml_results:MsgfRes);
-#	MergedDecoyMsgf=mergeResults(idxml_results:MsgfDecoyRes);
-#	MergedTandem=mergeResults(idxml_results:TandemRes);
-#	MergedDecoyTandem=mergeResults(idxml_results:TandemDecoyRes);
-#	TargetResults=MergedOmssa MergedMsgf MergedTandem;
-#	DecoyResults=MergedDecoyOmssa MergedDecoyMsgf MergedDecoyTandem;
-
 	TargetResults=OmssaRes MsgfRes TandemRes;
 	DecoyResults=OmssaDecoyRes MsgfDecoyRes TandemDecoyRes;
 
 	MergedTargetResults=mergeResults(idxml_results:TargetResults);
 	MergedDecoyResults=mergeResults(idxml_results:DecoyResults);
 
-	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults numthreads:numthreads);
-	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults numthreads:numthreads);
+	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults pmt:pmt numthreads:numthreads);
+	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults pmt:pmt numthreads:numthreads);
 
 	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
-
-	MappedFDRResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
-	csvResult=idxml2csv(idxml_results:MappedFDRResults);
+	idxmlResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
 }
 
 
@@ -81,26 +74,26 @@ deftask perSpectraFile(csvResult(File):mzMLFiles(File)
 #
 
 # Run OMSSA on the mzML data using the TOPP OMSSAAdapter
-deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name omssa_mods(File) omssa_usermods(File)) in bash *{
+deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name pmt fmt omssa_mods(File) omssa_usermods(File)) in bash *{
 	tar xf $db_blastDB_tar
 	ln -s `which omssacl` omssacl
-	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl
+	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
 	OmssaRes=res.idXML
 }*
 
 # Run MSGF+ on the mzML data using the TOPP MSGFPlusAdapter
-deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File)) in bash *{
+deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File) pmt) in bash *{
 	tar xf $db_msgfDB_tar
 	mv $mzMLFile spectra.mzML
 	mp=(`whereis MSGFPlus.jar`)
 	msgfjarpath=${mp[1]}
-	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable $msgfjarpath
+	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable $msgfjarpath -precursor_error_units Da -precursor_mass_tolerance $pmt
 	MsgfRes=msgf.idXML
 }*
 
 # Run X!Tandem on the mzML data using the TOPP XTandenAdapter
-deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File)) in bash *{
-	XTandemAdapter -in $mzMLFile -database $db_TandemDB -out tres.idXML
+deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File) pmt fmt) in bash *{
+	XTandemAdapter -in $mzMLFile -database $db_TandemDB -out tres.idXML -precursor_error_units Da -fragment_error_units Da -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
 	TandemRes=tres.idXML
 }*
 
@@ -151,9 +144,9 @@ deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
 }*
 
 # Create consensus using OpenMS ConsensusID
-deftask runConsensus(Consensus(File):idxml_results(File) numthreads) in bash *{
+deftask runConsensus(Consensus(File):idxml_results(File) pmt numthreads) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML -algorithm ranks -threads $numthreads
+	ConsensusID -in res.idXML -out cons.idXML -mz_delta $pmt -algorithm ranks -threads $numthreads
 	Consensus=cons.idXML
 }*
 
