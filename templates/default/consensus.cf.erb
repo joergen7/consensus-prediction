@@ -60,7 +60,7 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 	ConsensusTargetResults=runConsensus(idxml_results:MergedTargetResults pmt:pmt numthreads:numthreads);
 	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults pmt:pmt numthreads:numthreads);
 
-	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults);
+	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults numthreads:numthreads);
 	idxmlResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
 }
 
@@ -77,8 +77,8 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name pmt fmt omssa_mods(File) omssa_usermods(File)) in bash *{
 	tar xf $db_blastDB_tar
 	ln -s `which omssacl` omssacl
-	OMSSAAdapter -in $mzMLFile -out res.idXML -database ${blast_index_name}.psq -omssa_executable omssacl -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
-	OmssaRes=res.idXML
+	OMSSAAdapter -in $mzMLFile -out ores.idXML -database ${blast_index_name}.psq -omssa_executable omssacl -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
+	OmssaRes=ores.idXML
 }*
 
 # Run MSGF+ on the mzML data using the TOPP MSGFPlusAdapter
@@ -87,8 +87,8 @@ deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File) 
 	mv $mzMLFile spectra.mzML
 	mp=(`whereis MSGFPlus.jar`)
 	msgfjarpath=${mp[1]}
-	MSGFPlusAdapter -in spectra.mzML -out msgf.idXML -database $db_fasta -executable $msgfjarpath -precursor_error_units Da -precursor_mass_tolerance $pmt
-	MsgfRes=msgf.idXML
+	MSGFPlusAdapter -in spectra.mzML -out mres.idXML -database $db_fasta -executable $msgfjarpath -precursor_error_units Da -precursor_mass_tolerance $pmt
+	MsgfRes=mres.idXML
 }*
 
 # Run X!Tandem on the mzML data using the TOPP XTandenAdapter
@@ -126,8 +126,8 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #
 
 # Takes decoy ConsensusID results and target ConsensusID results and performs FDR.
-deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File)) in bash *{
-	FalseDiscoveryRate -in_target $target_idxml -in_decoy $decoy_idxml -out res.idXML -peptides_ony
+deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File) numthreads) in bash *{
+	FalseDiscoveryRate -in_target $target_idxml -in_decoy $decoy_idxml -out res.idXML -threads $numthreads
 	fdr_res=res.idXML
 }*
 
