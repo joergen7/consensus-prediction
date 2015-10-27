@@ -70,9 +70,11 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 
 
 ###################################################################
-# 			   Deftasks                            #
+# 			   Deftasks                               #
 ###################################################################
 
+
+###################################################################
 #
 # 			Run Algorithms
 #
@@ -101,6 +103,7 @@ deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File) pmt fmt) in b
 	TandemRes=tres.idXML
 }*
 
+###################################################################
 #
 # 			Index Databases
 #
@@ -125,6 +128,7 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 	db_tandemDB=${db_fasta}.pro
 }*
 
+###################################################################
 #
 #			Other Tasks
 #
@@ -135,7 +139,7 @@ deftask filterResults(idxml_res(File) : idxml_results(File) mzMLFile(File) numth
 	idxml_res=bn
 }*
 
-deftask inferProteins(idxml_res(File) : idxml_result(File) numthreads) in bash *{
+deftask inferProteins(idxml_res(File) : idxml_results(File) numthreads) in bash *{
 	ProteinInference -in $idxml_result -out $idxml_res -min_peptides_per_protein 2 -threads $numthreads
 }*
 
