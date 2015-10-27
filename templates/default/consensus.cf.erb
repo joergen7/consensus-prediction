@@ -64,7 +64,7 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 	fdrResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
 
 	protResults=inferProteins(idxml_results:fdrResults numthreads:numthreads);
-	filteredResults=filterResults(idxml_results:protResults numthreads:numthreads);
+	filteredResults=filterResults(idxml_results:protResults mzMLFile:mzMLFiles numthreads:numthreads );
 	idxmlResults=filteredResults;
 }
 
@@ -129,8 +129,10 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #			Other Tasks
 #
 
-deftask filterResults(idxml_res(File) : idxml_results(File) numthreads) in bash *{
-	IDFilter -in $idxml_results -out $idxml_res -best:strict -unique -remove_decoys -delete_unreferenced_peptide_hits
+deftask filterResults(idxml_res(File) : idxml_results(File) mzMLFile(File) numthreads) in bash *{
+	bn=$(basename $mzMLFile).id_xml
+	IDFilter -in $idxml_results -out bn -best:strict -unique -remove_decoys -delete_unreferenced_peptide_hits
+	idxml_res=bn
 }*
 
 deftask inferProteins(idxml_res(File) : idxml_result(File) numthreads) in bash *{
