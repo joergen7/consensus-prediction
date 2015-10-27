@@ -140,7 +140,7 @@ deftask filterResults(idxml_res(File) : idxml_results(File) mzMLFile(File) numth
 }*
 
 deftask inferProteins(idxml_res(File) : idxml_results(File) numthreads) in bash *{
-	ProteinInference -in $idxml_result -out $idxml_res -min_peptides_per_protein 2 -threads $numthreads
+	ProteinInference -in $idxml_results -out $idxml_res -min_peptides_per_protein 2 -threads $numthreads
 }*
 
 # Takes decoy ConsensusID results and target ConsensusID results and performs FDR.
