@@ -61,7 +61,11 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 	ConsensusDecoyResults=runConsensus(idxml_results:MergedDecoyResults pmt:pmt numthreads:numthreads);
 
 	FDRResults=establishFDR(target_idxml:ConsensusTargetResults decoy_idxml:ConsensusDecoyResults numthreads:numthreads);
-	idxmlResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
+	fdrResults=mapPeptides(idxml_results:FDRResults db_fasta:db_fasta);
+
+	protResults=inferProteins(idxml_results:fdrResults numthreads:numthreads);
+	filteredResults=filterResults(idxml_results:protResults numthreads:numthreads);
+	idxmlResults=filteredResults;
 }
 
 
@@ -125,6 +129,14 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #			Other Tasks
 #
 
+deftask filterResults(idxml_res(File) : idxml_results(File) numthreads) in bash *{
+	IDFilter -in $idxml_results -out $idxml_res -best:strict -unique -remove_decoys -delete_unreferenced_peptide_hits
+}*
+
+deftask inferProteins(idxml_res(File) : idxml_result(File) numthreads) in bash *{
+	ProteinInference -in $idxml_result -out $idxml_res -min_peptides_per_protein 2 -threads $numthreads
+}*
+
 # Takes decoy ConsensusID results and target ConsensusID results and performs FDR.
 deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File) numthreads) in bash *{
 	FalseDiscoveryRate -in_target $target_idxml -in_decoy $decoy_idxml -out res.idXML -threads $numthreads
@@ -146,7 +158,7 @@ deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
 # Create consensus using OpenMS ConsensusID
 deftask runConsensus(Consensus(File):idxml_results(File) pmt numthreads) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML -mz_delta $pmt -algorithm ranks -threads $numthreads
+	ConsensusID -in res.idXML -out cons.idXML -mz_delta $pmt -algorithm ranks -threads $numthreads -filter:considered_hits 5 -filter:min_support 1
 	Consensus=cons.idXML
 }*
 
