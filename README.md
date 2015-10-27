@@ -18,6 +18,32 @@ The workflow presented here has a number of additional advantages:
 
 Different from the workflow presented in the [(Nahnsen et al. 2011 )](http://pubs.acs.org/doi/abs/10.1021/pr2002879), we chose to use a target and a decoy database and perform the consensus on both of them individually before calculating an FDR. We reason that we loose less PSMs in this manner when compared to performing an FDR before calculating the consensus.
 
+## Test Data
+We used selected files from http://www.ebi.ac.uk/pride/archive/projects/PXD001933 to test the workflow.
+We had to restrict ourselves to files to mgf files below 600MB since we wanted to execute multiple parallel tasks and our test virtual machine had only about 25GB of RAM. The files we used were:
+
+    MB1.mgf	    429.297 MB	http://www.ebi.ac.uk/pride/data/archive/2015/08/PXD001933/MB1.mgf
+    MB2.mgf	    455.515 MB	http://www.ebi.ac.uk/pride/data/archive/2015/08/PXD001933/MB2.mgf
+    NUNP1.mgf	244.041 MB	http://www.ebi.ac.uk/pride/data/archive/2015/08/PXD001933/NUNP1.mgf
+    NUNP2.mgf	400.822 MB	http://www.ebi.ac.uk/pride/data/archive/2015/08/PXD001933/NUNP2.mgf
+    ORG1.mgf	365.521 MB	http://www.ebi.ac.uk/pride/data/archive/2015/08/PXD001933/ORG1.mgf
+
+You need to tar these files to use them as input: 
+
+    tar cf spectra.tar *.mgf
+
+As a protein database we used sequences from Ensembl: 
+
+    ftp://ftp.ensembl.org/pub/release-82/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.abinitio.fa.gz
+    ftp://ftp.ensembl.org/pub/release-82/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz
+    
+You need to unzip these files and turn them into one fasta file for use as input:
+
+    gzip -d *.fa.gz
+    cat Homo_sapiens.GRCh38.pep.abinitio.fa Homo_sapiens.GRCh38.pep.all.fa > protein.fasta
+
+Now you have test data and can test run the workflow.
+
 ## Executing the Workflow
 When executing the workflow, the files mods.xml and usermods.xml (two required files for OMSSA) must exist in the current directory. A protein database needs to be in the current directory and its name must be protein.fasta. The files should only contain relevant protein information and must not contain any decoy sequences. All spectra files (mgf, mzXML, mzML, ms2 formats are supported) that are intended to be run need to be tared (tar cf spectra.tar ..SPECTRA..FILES..) and the spectra.tar file needs to be in the current directory. Precursor mass tolerance is set to 0.8 by default and fragment mass tolerance to 0.3. To change these settings, the consensus.cf file needs to be edited manually (any text editor will do .. changes values in lines 8 and 9 to suit your instrument error).
 If the following files:
