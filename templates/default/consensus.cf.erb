@@ -157,8 +157,9 @@ deftask mapPeptides(MappedResults(File):idxml_results(File) db_fasta(File)) in b
 
 # Convert resutls into easier to read csv format.
 deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
-	TextExporter -in $idxml_results -out res.csv
-	csv_results=res.csv
+	res=${idxml_results}.csv
+	TextExporter -in $idxml_results -out $res
+	csv_results=$res
 }*
 
 # Create consensus using OpenMS ConsensusID
@@ -182,7 +183,12 @@ deftask mergeResults(MergedResults(File):<idxml_results(File)>) in bash *{
 
 # Convert from mzdata, mzXML, mzML, .., mgf to mzML.
 deftask convertSpectraFiles(mzMLFile(File):spectraFile(File)) in bash *{
-	FileConverter -in $spectraFile -out $mzMLFile -out_type mzML
+	arr=(${spectraFile//'_'/ })
+	echo ${arr[@]}
+	arr=(${arr[2]//'.'/ })
+	fn=${arr[0]}.mzML
+	FileConverter -in $spectraFile -out $fn -out_type mzML
+	mzMLFile=$fn;
 }*
 
 # Turn a tar file into a list of spectra files.
