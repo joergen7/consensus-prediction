@@ -1,12 +1,12 @@
 # Input data and settings
 # spectra_tar="spectra.tar";		# Needs to be provided (can contain mgf, mzXML, mzML, or ms2 files).
-spectraFiles='NUNP1.mgf' 'NUNP2.mgf' 'ORG1.mgf' 'ORG2.mfg';
+spectraFiles='spectra/NUNP1.mgf' 'spectra/NUNP2.mgf' 'spectra/ORG1.mgf' 'spectra/ORG2.mfg';
 # db_fasta="protein.fasta"; 		# Only provide the target DB (protein) in fasta format ... decoy will be created.
-fa_gz='Homo_sapiens.GRCh38.pep.abinitio.fa.gz' 'Homo_sapiens.GRCh38.pep.all.fa.gz';
+fa_gz='pep/Homo_sapiens.GRCh38.pep.abinitio.fa.gz' 'pep/Homo_sapiens.GRCh38.pep.all.fa.gz';
 blast_index_name="prots"; 		# ignore
 omssa_mods="mods.xml";			# File necessary for OMSSA to run.
 omssa_usermods="usermods.xml";		# File necessary for OMSSA to run.
-numthreads="4"; 			#ConsensusID is slow and the last process so it should run in parallel (give half of the cores to this process).
+numthreads="2"; 			#ConsensusID is slow and the last process so it should run in parallel (give half of the cores to this process).
 pmt="0.8"; 				#Precursor mass error tolerance (Daltons)
 fmt="0.3"; 				#Fragment (Product) mass error tolerance (Daltons)
 

@@ -59,4 +59,11 @@ pep_id_set.each { |id|
 
 }
 
+# create links to xml files
+link "#{node.dir.data}/mods.xml" do
+  to "./omssa-2.1.9.linux/mods.xml"
+end
 
+link "#{node.dir.data}/usermods.xml" do
+  to "./omssa-2.1.9.linux/usermods.xml"
+end
