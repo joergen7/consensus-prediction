@@ -31,7 +31,7 @@ idxml_results=perSpectraFile(mzMLFiles:mzMLFiles
 	db_Tandem_decoyDB:db_Tandem_decoyDB omssa_mods:omssa_mods 
 	omssa_usermods:omssa_usermods blast_index_name:blast_index_name
 	numthreads:numthreads pmt:pmt fmt:fmt);
-csvResult=idxml2csv(idxml_results:idxml_results);
+csvResult=idxml2csv(idxml_results:idxml_results mzMLFile:mzMLFiles);
 idxml_results;
 csvResult;
 
@@ -86,7 +86,12 @@ deftask perSpectraFile(idxmlResults(File):mzMLFiles(File)
 deftask runOmssa(OmssaRes(File):mzMLFile(File) db_blastDB_tar(File) blast_index_name pmt fmt omssa_mods(File) omssa_usermods(File)) in bash *{
 	tar xf $db_blastDB_tar
 	ln -s `which omssacl` omssacl
-	OMSSAAdapter -in $mzMLFile -out ores.idXML -database ${blast_index_name}.psq -omssa_executable omssacl -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
+	OMSSAAdapter -in $mzMLFile\
+		-out ores.idXML\
+		-database ${blast_index_name}.psq\
+		-omssa_executable omssacl\
+		-precursor_mass_tolerance $pmt\
+		-fragment_mass_tolerance $fmt
 	OmssaRes=ores.idXML
 }*
 
@@ -96,13 +101,24 @@ deftask runMsgf(MsgfRes(File):mzMLFile(File) db_fasta(File) db_msgfDB_tar(File) 
 	mv $mzMLFile spectra.mzML
 	mp=(`whereis MSGFPlus.jar`)
 	msgfjarpath=${mp[1]}
-	MSGFPlusAdapter -in spectra.mzML -out mres.idXML -database $db_fasta -executable $msgfjarpath -precursor_error_units Da -precursor_mass_tolerance $pmt
+	MSGFPlusAdapter -in spectra.mzML\
+		-out mres.idXML\
+		-database $db_fasta\
+		-executable $msgfjarpath\
+		-precursor_error_units Da\
+		-precursor_mass_tolerance $pmt
 	MsgfRes=mres.idXML
 }*
 
 # Run X!Tandem on the mzML data using the TOPP XTandenAdapter
 deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File) pmt fmt) in bash *{
-	XTandemAdapter -in $mzMLFile -database $db_TandemDB -out tres.idXML -precursor_error_units Da -fragment_error_units Da -precursor_mass_tolerance $pmt -fragment_mass_tolerance $fmt
+	XTandemAdapter -in $mzMLFile\
+		-database $db_TandemDB\
+		-out tres.idXML\
+		-precursor_error_units Da\
+		-fragment_error_units Da\
+		-precursor_mass_tolerance $pmt\
+		-fragment_mass_tolerance $fmt
 	TandemRes=tres.idXML
 }*
 
@@ -113,7 +129,10 @@ deftask runTandem(TandemRes(File):mzMLFile(File) db_TandemDB(File) pmt fmt) in b
 
 # Index fasta database using makeblastdb from ncbi
 deftask makeBlastDB(db_blastDB_tar(File):db_fasta(File) idx_name) in bash *{
-	makeblastdb -in $db_fasta -dbtype prot -hash_index -out $idx_name
+	makeblastdb -in $db_fasta\
+		-dbtype prot\
+		-hash_index\
+		-out $idx_name
 	tar cf db.tar --remove-files $idx_name*
 	db_blastDB_tar=db.tar
 }*
@@ -137,38 +156,55 @@ deftask makeTandemDB(db_tandemDB(File):db_fasta(File)) in bash *{
 #
 
 deftask filterResults(idxml_res(File) : idxml_results(File) mzMLFile(File) numthreads) in bash *{
-	bn=$(basename $mzMLFile).id_xml
-	IDFilter -in $idxml_results -out bn -best:strict -unique -remove_decoys -delete_unreferenced_peptide_hits
-	idxml_res=bn
+	idxml_res=$(basename $mzMLFile).idXML
+	IDFilter -in $idxml_results\
+		-out $idxml_res -best:strict\
+		-unique -remove_decoys\
+		-delete_unreferenced_peptide_hits
 }*
 
 deftask inferProteins(idxml_res(File) : idxml_results(File) numthreads) in bash *{
-	ProteinInference -in $idxml_results -out $idxml_res -min_peptides_per_protein 2 -threads $numthreads
+	ProteinInference -in $idxml_results\
+		-out $idxml_res\
+		-min_peptides_per_protein 2\
+		-threads $numthreads
 }*
 
 # Takes decoy ConsensusID results and target ConsensusID results and performs FDR.
 deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File) numthreads) in bash *{
-	FalseDiscoveryRate -in_target $target_idxml -in_decoy $decoy_idxml -out res.idXML -threads $numthreads
+	FalseDiscoveryRate -in_target $target_idxml\
+		-in_decoy $decoy_idxml\
+		-out res.idXML\
+		-threads $numthreads
 	fdr_res=res.idXML
 }*
 
 #
 deftask mapPeptides(MappedResults(File):idxml_results(File) db_fasta(File)) in bash *{
-	PeptideIndexer -in $idxml_results -fasta $db_fasta -out mappedres.idXML -missing_decoy_action warn -allow_unmatched
+	PeptideIndexer -in $idxml_results\
+		-fasta $db_fasta\
+		-out mappedres.idXML\
+		-missing_decoy_action warn\
+		-allow_unmatched
 	MappedResults=mappedres.idXML
 }*
 
 # Convert resutls into easier to read csv format.
-deftask idxml2csv(csv_results(File):idxml_results(File)) in bash *{
-	res=${idxml_results}.csv
-	TextExporter -in $idxml_results -out $res
-	csv_results=$res
+deftask idxml2csv(csv_results(File):idxml_results(File) mzMLFile(File)) in bash *{
+	csv_results=$(basename $mzMLFile).csv
+	TextExporter -in $idxml_results -out $csv_results
 }*
 
 # Create consensus using OpenMS ConsensusID
 deftask runConsensus(Consensus(File):idxml_results(File) pmt numthreads) in bash *{
 	mv $idxml_results res.idXML
-	ConsensusID -in res.idXML -out cons.idXML -mz_delta $pmt -algorithm ranks -threads $numthreads -filter:considered_hits 5 -filter:min_support 1
+	ConsensusID -in res.idXML\
+		-out cons.idXML\
+		-mz_delta $pmt\
+		-algorithm ranks\
+		-threads $numthreads\
+		-filter:considered_hits 5\
+		-filter:min_support 1
 	Consensus=cons.idXML
 }*
 
