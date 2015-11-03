@@ -12,8 +12,8 @@ fmt="0.3"; 				#Fragment (Product) mass error tolerance (Daltons)
 
 
 # Convert Spectra and index databases
-# spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
-db_fasta=cat(file:gunzip(gz:fa_gz));
+spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
+//db_fasta=cat(file:gunzip(gz:fa_gz));
 mzMLFiles=convertSpectraFiles(spectraFile:spectraFiles);
 #mzMLFiles; #Remove the hashtag at the beginning of the line to store the converted spectra.
 db_fasta_decoy=makeDecoyDB(db_fasta:db_fasta);
