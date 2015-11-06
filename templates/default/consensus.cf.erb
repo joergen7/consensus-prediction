@@ -16,52 +16,60 @@ spectraFiles=getSupportedSpectraFilesFromTar(spectra_tar:spectra_tar);
 //db_fasta=cat(file:gunzip(gz:fa_gz));
 mzMLFiles=convertSpectraFiles(spectraFile:spectraFiles);
 #mzMLFiles; #Remove the hashtag at the beginning of the line to store the converted spectra.
-db_fasta_app=appendDecoyDB(db_fasta:db_fasta);
-db_blastDB_tar=makeBlastDB(db_fasta:db_fasta_app idx_name:blast_index_name);
-db_msgfDB_tar=makeMsgfDB(db_fasta:db_fasta_app);
-db_TandemDB=makeTandemDB(db_fasta:db_fasta_app);
+db_fasta_decoy=makeDecoyDB(db_fasta:db_fasta);
+db_blastDB_tar=makeBlastDB(db_fasta:db_fasta idx_name:blast_index_name);
+db_blastDB_decoy_tar=makeBlastDB(db_fasta:db_fasta_decoy idx_name:blast_index_name);
+db_msgfDB_tar=makeMsgfDB(db_fasta:db_fasta);
+db_msgfDB_decoy_tar=makeMsgfDB(db_fasta:db_fasta_decoy);
+db_TandemDB=makeTandemDB(db_fasta:db_fasta);
+db_Tandem_decoyDB=makeTandemDB(db_fasta:db_fasta_decoy);
 
 idxml_results=perSpectraFile(mzMLFiles:mzMLFiles 
-	db_fasta:db_fasta db_blastDB_tar:db_blastDB_tar
-	db_msgfDB_tar:db_msgfDB_tar db_TandemDB:db_TandemDB
-	omssa_mods:omssa_mods omssa_usermods:omssa_usermods
-	blast_index_name:blast_index_name numthreads:numthreads
-	pmt:pmt fmt:fmt);
+	db_fasta:db_fasta db_fasta_decoy:db_fasta_decoy db_blastDB_tar:db_blastDB_tar
+	db_blastDB_decoy_tar:db_blastDB_decoy_tar db_msgfDB_tar:db_msgfDB_tar
+	db_msgfDB_decoy_tar:db_msgfDB_decoy_tar db_TandemDB:db_TandemDB
+	db_Tandem_decoyDB:db_Tandem_decoyDB omssa_mods:omssa_mods 
+	omssa_usermods:omssa_usermods blast_index_name:blast_index_name
+	numthreads:numthreads pmt:pmt fmt:fmt);
 csvResult=idxml2csv(idxml_results:idxml_results mzMLFile:mzMLFiles);
 idxml_results;
 csvResult;
 
 #Run the worflow once for each spectra file in spectra.tar
 deftask perSpectraFile(idxmlResults(File):mzMLFiles(File) 
-		[db_fasta db_blastDB_tar(File) db_msgfDB_tar(File) db_TandemDB(File)
-		omssa_mods omssa_usermods blast_index_name numthreads pmt fmt]) {
-
+		[db_fasta db_fasta_decoy 
+		 db_blastDB_tar(File) db_blastDB_decoy_tar(File) db_msgfDB_tar(File) 
+		 db_msgfDB_decoy_tar(File) db_TandemDB(File) db_Tandem_decoyDB(File) 
+		 omssa_mods omssa_usermods blast_index_name numthreads pmt fmt]) {
 # Run database search tools
 	OmssaRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_tar blast_index_name:blast_index_name pmt:pmt fmt:fmt omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
+	OmssaDecoyRes=runOmssa(mzMLFile:mzMLFiles db_blastDB_tar:db_blastDB_decoy_tar blast_index_name:blast_index_name pmt:pmt fmt:fmt omssa_mods:omssa_mods omssa_usermods:omssa_usermods);
 	MsgfRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta db_msgfDB_tar:db_msgfDB_tar pmt:pmt);
+	MsgfDecoyRes=runMsgf(mzMLFile:mzMLFiles db_fasta:db_fasta_decoy db_msgfDB_tar:db_msgfDB_decoy_tar pmt:pmt);
 	TandemRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_TandemDB pmt:pmt fmt:fmt);
-# Calculate posterior error probability
-	OmssaPEP=calcPEP(idxml_results:OmssaRes);
-	MsgfPEP=calcPEP(idxml_results:MsgfRes);
-	TandemPEP=calcPEP(idxml_results:TandemRes);
+	TandemDecoyRes=runTandem(mzMLFile:mzMLFiles db_TandemDB:db_Tandem_decoyDB pmt:pmt fmt:fmt);
+# Combine decoy and target results
+	OmssaCombResMerged=establishFDR(target_idxml:OmssaRes decoy_idxml:OmssaDecoyRes numthreads:numthreads);
+	MsgfComResMerged=establishFDR(target_idxml:MsgfRes decoy_idxml:MsgfDecoyRes numthreads:numthreads);
+	TandemCombResMerged=establishFDR(target_idxml:TandemRes decoy_idxml:TandemDecoyRes numthreads:numthreads);
 # Create consensus
-	PEPResMerged=OmssaPEP MsgfPEP TandemPEP;
-	ConsensusRes=runConsensus(idxml_results:PEPResMerged pmt:pmt fmt:fmt numthreads:numthreads);
+	FDRRes=OmssaCombResMerged MsgfComResMerged TandemCombResMerged;
+	FDRResMerged=mergeResults(idxml_results:FDRRes);
+	ConsensusRes=runConsensus(idxml_results:FDRResMerged pmt:pmt fmt:fmt numthreads:numthreads);
 	ConsResMapped=mapPeptides(idxml_results:ConsensusRes db_fasta:db_fasta);
-	FDRResults=calculateFDR(idxml_results:ConsResMapped numthreads:numthreads);
-	FilteredResults=filterResults(idxml_results:FDRResults mzMLFile:mzMLFiles numthreads:numthreads);
+	#FDRResults=calculateFDR(idxml_results:ConsResMapped numthreads:numthreads);
+	#FilteredResults=filterResults(idxml_results:FDRResults mzMLFile:mzMLFiles numthreads:numthreads);
+	FilteredResults=filterResults(idxml_results:ConsResMapped mzMLFile:mzMLFiles numthreads:numthreads);
 	idxmlResults=FilteredResults;
 }
 
 
-#################################################################
-#
-# 							Deftasks							
-#
-#################################################################
+###################################################################
+# 			   Deftasks                               #
+###################################################################
 
 
-#################################################################
+###################################################################
 #
 # 			Run Algorithms
 #
@@ -168,14 +176,13 @@ deftask establishFDR(fdr_res(File):target_idxml(File) decoy_idxml(File) numthrea
 	FalseDiscoveryRate -in_target $target_idxml\
 		-in_decoy $decoy_idxml\
 		-out res.idXML\
-		-threads $numthreads\
+		-threads $numthreads
 	fdr_res=res.idXML
 }*
 deftask calculateFDR(fdr_res(File):idxml_results(File) numthreads) in bash *{
-	FalseDiscoveryRate -in_target $target_idxml\
-		-in $idxml_results\
+	FalseDiscoveryRate -in $idxml_results\
 		-out res.idXML\
-		-threads $numthreads\
+		-threads $numthreads
 	fdr_res=res.idXML
 }*
 
@@ -205,12 +212,10 @@ deftask runConsensus(Consensus(File):idxml_results(File) pmt fmt numthreads) in 
 		-out cons.idXML\
 		-rt_delta 5\
 		-mz_delta $pmt\
-		-algorithm PEPMatrix\
+		-algorithm ranks\
 		-threads $numthreads\
 		-filter:considered_hits 10\
-		-filter:min_support 0\
-		-min_shared 2\
-		-mass_tolerance $fmt
+		-filter:min_support 0
 	Consensus=cons.idXML
 }*
 
@@ -253,15 +258,6 @@ deftask cat( out( File ) : <file( File )> )in bash *{
 }*
 
 deftask makeDecoyDB(db_fasta_decoy(File):db_fasta(File)) in bash *{
-	DecoyDatabase -in $db_fasta\
-		-out decoy.fasta\
-		-append
+	DecoyDatabase -in $db_fasta -out decoy.fasta
 	db_fasta_decoy=decoy.fasta
-}*
-
-deftask appendDecoyDB(db_fasta(File):db_fasta(File)) in bash *{
-	DecoyDatabase -in $db_fasta\
-		-out decoy.fasta\
-		-append
-	db_fasta=decoy.fasta
 }*
