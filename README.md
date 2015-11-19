@@ -5,7 +5,7 @@ are used to establish peptide spectrum matches (PSM). A battery of tools have be
 (OMSSA, X!Tandem, pFind, MSAmanda, MSGF+, MassWizz, ...) and are being sold (Sequest, Mascot, PEAKS, ...).
 It has been shown that using multiple tools allows the establishment of more confident PSMs.
 Therefore, consensus prediction is popular if an adequate compute infrastructure is available.
-Oliver Kohlbacher's group published a consensus scoring algorithm [(Nahnsen et al. 2011 )](http://pubs.acs.org/doi/abs/10.1021/pr2002879).
+Oliver Kohlbacher's group published a consensus scoring algorithm ([Nahnsen et al. 2011](http://pubs.acs.org/doi/abs/10.1021/pr2002879)).
 They used OMSSA, X!Tandem, and Mascot in there study. We were not able to find the workflow they build in OpenMS and,
 therefore, prepared the workflow using mostly OpenMS. Since not everyone has access to the commercial tool Mascot,
 we elected to use MSGF+ (has been shown to perform as well as Mascot) to replace it.
